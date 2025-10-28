@@ -28,9 +28,9 @@ def calculate_similarity_vectorized(
     df_data = []
     for inv in invoices:
         df_data.append({
-            'amount': inv.amount,
-            'transaction_date': inv.transaction_date,
-            'payee_embedding': inv.payee_embedding,
+            'amount': inv.invoice_total_amount,
+            'invoice_date': inv.invoice_date,
+            'seller_name_embedding': inv.seller_name_embedding,
             'index': inv.id
         })
     
@@ -52,8 +52,8 @@ def calculate_similarity_vectorized(
         elif isinstance(input_date, datetime):
             input_date = pd.Timestamp(input_date)
         
-        inv_df['transaction_date'] = pd.to_datetime(inv_df['transaction_date'])
-        date_diff = np.abs((inv_df["transaction_date"] - input_date).dt.days)
+        inv_df['invoice_date'] = pd.to_datetime(inv_df['invoice_date'])
+        date_diff = np.abs((inv_df["invoice_date"] - input_date).dt.days)
         
         if date_method == "linear":
             scores["date"] = date_score_linear(date_diff)
@@ -73,11 +73,11 @@ def calculate_similarity_vectorized(
             
             contact_scores = []
             for idx, row in inv_df.iterrows():
-                if row['payee_embedding'] is not None and len(row['payee_embedding']) > 0:
-                    payee_emb = np.array(row['payee_embedding'], dtype=np.float32)
+                if row['seller_name_embedding'] is not None and len(row['seller_name_embedding']) > 0:
+                    seller_emb = np.array(row['seller_name_embedding'], dtype=np.float32)
                     contact_emb_norm = contact_embedding / np.linalg.norm(contact_embedding)
-                    payee_emb_norm = payee_emb / np.linalg.norm(payee_emb)
-                    cos_sim = np.dot(contact_emb_norm, payee_emb_norm)
+                    seller_emb_norm = seller_emb / np.linalg.norm(seller_emb)
+                    cos_sim = np.dot(contact_emb_norm, seller_emb_norm)
                     contact_scores.append(float(cos_sim))
                 else:
                     contact_scores.append(0.0)

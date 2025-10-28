@@ -2,9 +2,12 @@ from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from datetime import datetime
 import uvicorn
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from models import ReconcileRequest, ReconcileResponse
-from utils import db_manager, model_loader, find_best_matches
+from models.document_invoice import DocumentInvoice
+from utils import model_loader, find_best_matches
 from settings import settings
 
 
@@ -15,8 +18,16 @@ async def lifespan(app: FastAPI):
     print("=" * 60)
     
     model_loader.initialize()
-    db_manager.initialize()
-    db_manager.create_tables()
+    
+    global engine, SessionLocal
+    engine = create_engine(
+        settings.database_url,
+        pool_pre_ping=True,
+        pool_size=10,
+        max_overflow=20
+    )
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    print(f"Database connected: {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}")
     
     print("=" * 60)
     print("API ready to accept requests!")
@@ -25,6 +36,9 @@ async def lifespan(app: FastAPI):
     yield
     
     print("Shutting down...")
+
+engine = None
+SessionLocal = None
 
 
 app = FastAPI(
@@ -41,8 +55,12 @@ async def reconcile_transaction(request: ReconcileRequest):
         raise HTTPException(status_code=503, detail="Model not loaded yet")
     
     try:
-        invoices = db_manager.get_all_invoices()
-        total_invoices = len(invoices)
+        session = SessionLocal()
+        try:
+            invoices = session.query(DocumentInvoice).all()
+            total_invoices = len(invoices)
+        finally:
+            session.close()
         
         if total_invoices == 0:
             return {

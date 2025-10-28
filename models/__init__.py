@@ -3,12 +3,11 @@ from .schemas import (
     MatchResult,
     ReconcileResponse
 )
-from .database import Base, Invoice
+from .document_invoice import DocumentInvoice
 
 __all__ = [
     "ReconcileRequest",
     "MatchResult",
     "ReconcileResponse",
-    "Base",
-    "Invoice"
+    "DocumentInvoice"
 ]
